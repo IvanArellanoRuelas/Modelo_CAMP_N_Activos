@@ -1,0 +1,95 @@
+---
+title: "Modelo Camp_Tarea"
+author: "Iván Arellano, Juan Pablo Rodriguez, Santiago Romero"
+date: "28/9/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(PerformanceAnalytics)
+library(quantmod)
+library(lubridate)
+library(readxl)
+library(Rcpp)
+library(dplyr)
+library(tibble)
+```
+
+```{r}
+claves <- c('VOLARA.MX','BBVA.MX','BOLSAA.MX', "^MXX")
+getSymbols(claves, from = "2016-09-01", to=today(), warnings=FALSE)
+list <- lapply(c('VOLARA.MX','BBVA.MX','BOLSAA.MX', "MXX"), function(x) Cl(get(x))) #Se quita el claves por el contenido por ^
+precio <- (do.call(merge, list))
+```
+
+
+
+```{r}
+precio_a <- merge.xts(
+    to.monthly(precio[,1])[,4],
+    to.monthly(precio[,2])[,4],
+    to.monthly(precio[,3])[,4]
+  )
+a_renm <- monthlyReturn(precio_a)[-1,]
+names(a_renm) <- "Portafolio"
+```
+
+```{r}
+precio_m <- to.monthly(precio)
+m_renm <- monthlyReturn(precio_m[,4])[-1,]
+names(m_renm) <- "IPC"
+```
+
+
+```{r}
+plot(merge.xts(a_renm, m_renm), main="Comp Mensual", legend.loc="bottom")
+```
+
+```{r}
+Rf <- read_xlsx("tasa_cete.xlsx")
+Rf <- subset(Rf, Rf$SF43945!="N/E")
+Rf$SF43945 <- as.numeric(Rf$SF43945)/100/12
+Rf <- as.xts(Rf$SF43945, order.by=date(Rf$Fecha))
+Rf <- to.monthly(Rf)[,4][-1,]
+names(Rf) <- "Cete"
+```
+
+```{r}
+Rj <- Return.excess(a_renm, Rf) #Rendimiento extra que ofrece mi activo comparado con el rendimiento libre de riesgo
+Rm <- Return.excess(m_renm, Rf) #Rendimiento extra que ofrece el mercado comparado con el activo libre de riesgo
+```
+
+```{r}
+CAPM <- lm(Rj~Rm)
+summary(CAPM)
+```
+
+
+
+```{r}
+Beta <- CAPM[["coefficients"]][["Rm"]]
+Beta
+```
+
+```{r}
+Alpha <- CAPM[["coefficients"]][["(Intercept)"]]
+Alpha
+```
+
+```{r}
+RC <- 0.2644 #Multiple R-squared
+PRS <- RC*100
+PRNS <- 100 - PRS
+RSE <- 0.1469  # Residual standard error 
+RT <- (RSE)^2/(1-RC)*100
+RNS <- RSE^2*100
+RisgoNoSistematico <- RT*(1-RC)
+UriesgoSistem <- RT*(RC)
+UriesgoTotal<- RT*(RC)+RT*(1-RC)
+```
+
+```{r}
+Resultados <- tibble("Riesgo Total"=RT, "Riesgo Sistemático"=RT*RC, "Riesgo No Sistemático"=RT*(1-RC), "% de Riesgo Sistemático"=RC*100, "% Riesgo No Sistemático"=(1-RC)*100, "Beta"=Beta, "Alpha"=Alpha)
+Resultados
+```
+
