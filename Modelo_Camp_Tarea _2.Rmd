@@ -16,9 +16,9 @@ library(tibble)
 ```
 
 ```{r}
-claves <- c('VOLARA.MX','BBVA.MX','BOLSAA.MX', "^MXX")
+claves <- c('BOLSAA.MX','ALSEA.MX','Q.MX','ELEKTRA.MX', "^MXX")
 getSymbols(claves, from = "2016-09-01", to=today(), warnings=FALSE)
-list <- lapply(c('VOLARA.MX','BBVA.MX','BOLSAA.MX', "MXX"), function(x) Cl(get(x))) #Se quita el claves por el contenido por ^
+list <- lapply(c('BOLSAA.MX','ALSEA.MX','Q.MX','ELEKTRA.MX', "MXX"), function(x) Cl(get(x))) #Se quita el claves por el contenido por ^
 precio <- (do.call(merge, list))
 ```
 
@@ -28,21 +28,28 @@ precio <- (do.call(merge, list))
 precio_a <- merge.xts(
     to.monthly(precio[,1])[,4],
     to.monthly(precio[,2])[,4],
-    to.monthly(precio[,3])[,4]
+    to.monthly(precio[,3])[,4],
+    to.monthly(precio[,4])[,4]
   )
 a_renm <- monthlyReturn(precio_a)[-1,]
 names(a_renm) <- "Portafolio"
 ```
+Tener la acción de ca
+```{r}
+Valor_port <- 10*precio_a[,1]+10*precio_a[,2]+5*precio_a[,3]+10*precio_a[,4]
+port_renm <- monthlyReturn(Valor_port)[-1,]
+```
+
 
 ```{r}
-precio_m <- to.monthly(precio)
-m_renm <- monthlyReturn(precio_m[,4])[-1,]
+precio_m <- to.monthly(precio[,5])
+m_renm <- monthlyReturn(precio_m)
 names(m_renm) <- "IPC"
 ```
 
 
 ```{r}
-plot(merge.xts(a_renm, m_renm), main="Comp Mensual", legend.loc="bottom")
+plot(merge.xts(port_renm, m_renm), main="Comp Mensual", legend.loc="bottom")
 ```
 
 ```{r}
@@ -55,19 +62,19 @@ names(Rf) <- "Cete"
 ```
 
 ```{r}
-Rj <- Return.excess(a_renm, Rf) #Rendimiento extra que ofrece mi activo comparado con el rendimiento libre de riesgo
+Rj <- Return.excess(port_renm, Rf) #Rendimiento extra que ofrece mi activo comparado con el rendimiento libre de riesgo
 Rm <- Return.excess(m_renm, Rf) #Rendimiento extra que ofrece el mercado comparado con el activo libre de riesgo
 ```
 
 ```{r}
-CAPM <- lm(Rj~Rm)
+CAPM <- lm(Rj~Rm[-1,])
 summary(CAPM)
 ```
 
 
 
 ```{r}
-Beta <- CAPM[["coefficients"]][["Rm"]]
+Beta <- CAPM[["coefficients"]][["Rm[-1, ]"]]
 Beta
 ```
 
@@ -77,10 +84,10 @@ Alpha
 ```
 
 ```{r}
-RC <- 0.2644 #Multiple R-squared
+RC <- 0.04184 #Multiple R-squared
 PRS <- RC*100
 PRNS <- 100 - PRS
-RSE <- 0.1469  # Residual standard error 
+RSE <- 0.09294       # Residual standard error 
 RT <- (RSE)^2/(1-RC)*100
 RNS <- RSE^2*100
 RisgoNoSistematico <- RT*(1-RC)
