@@ -15,10 +15,13 @@ library(dplyr)
 library(tibble)
 ```
 
-```{r}
-claves <- c('BOLSAA.MX','ALSEA.MX','Q.MX','ELEKTRA.MX', "^MXX")
+```{r , warning=FALSE}
+claves <- c('AMXL.MX','WALMEX.MX','FEMSAUBD.MX','GFNORTEO.MX','CEMEXCPO.MX',
+            'GMEXICOB.MX','BIMBOA.MX','TLEVISACPO.MX','AC.MX'
+            , "^MXX")
 getSymbols(claves, from = "2016-09-01", to=today(), warnings=FALSE)
-list <- lapply(c('BOLSAA.MX','ALSEA.MX','Q.MX','ELEKTRA.MX', "MXX"), function(x) Cl(get(x))) #Se quita el claves por el contenido por ^
+list <- lapply(c('AMXL.MX','WALMEX.MX','FEMSAUBD.MX','GFNORTEO.MX','CEMEXCPO.MX',
+                 'GMEXICOB.MX','BIMBOA.MX','TLEVISACPO.MX','AC.MX',"MXX"), function(x) Cl(get(x))) #Se quita el claves por el contenido por ^
 precio <- (do.call(merge, list))
 ```
 
@@ -29,20 +32,26 @@ precio_a <- merge.xts(
     to.monthly(precio[,1])[,4],
     to.monthly(precio[,2])[,4],
     to.monthly(precio[,3])[,4],
-    to.monthly(precio[,4])[,4]
+    to.monthly(precio[,4])[,4],
+    to.monthly(precio[,5])[,4],
+    to.monthly(precio[,6])[,4],
+    to.monthly(precio[,7])[,4],
+    to.monthly(precio[,8])[,4],
+    to.monthly(precio[,9])[,4],
+    to.monthly(precio[,10])[,4]
   )
 a_renm <- monthlyReturn(precio_a)[-1,]
-names(a_renm) <- "Portafolio"
+names(a_renm) <- ("Portafolio")
 ```
 Tener la acción de ca
 ```{r}
-Valor_port <- 10*precio_a[,1]+10*precio_a[,2]+5*precio_a[,3]+10*precio_a[,4]
+Valor_port <- 18*precio_a[,1]+12*precio_a[,2]+12*precio_a[,3]+11*precio_a[,4]+8*precio_a[,5]+8*precio_a[,6]+4*precio_a[,7]+4*precio_a[,8]+3*precio_a[,9]
 port_renm <- monthlyReturn(Valor_port)[-1,]
 ```
 
 
 ```{r}
-precio_m <- to.monthly(precio[,5])
+precio_m <- to.monthly(precio[,10])
 m_renm <- monthlyReturn(precio_m)
 names(m_renm) <- "IPC"
 ```
@@ -84,10 +93,10 @@ Alpha
 ```
 
 ```{r}
-RC <- 0.04184 #Multiple R-squared
+RC <- 0.9301 #Multiple R-squared
 PRS <- RC*100
 PRNS <- 100 - PRS
-RSE <- 0.09294       # Residual standard error 
+RSE <- 0.01329        # Residual standard error 
 RT <- (RSE)^2/(1-RC)*100
 RNS <- RSE^2*100
 RisgoNoSistematico <- RT*(1-RC)
