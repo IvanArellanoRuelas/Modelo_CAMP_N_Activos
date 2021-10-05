@@ -1,5 +1,5 @@
 ---
-title: "Modelo Camp_Tarea"
+title: "Modelo CAPM Tarea"
 author: "Iván Arellano, Juan Pablo Rodriguez, Santiago Romero"
 date: "28/9/2021"
 output: html_document
@@ -15,19 +15,20 @@ library(dplyr)
 library(tibble)
 ```
 
-```{r , warning=FALSE}
+```{r , warning=FALSE, include=FALSE}
 claves <- c('AMXL.MX','WALMEX.MX','FEMSAUBD.MX','GFNORTEO.MX','CEMEXCPO.MX',
-            'GMEXICOB.MX','BIMBOA.MX','TLEVISACPO.MX','AC.MX'
+            'GMEXICOB.MX','BIMBOA.MX','Q.MX','AC.MX'
             , "^MXX")
 getSymbols(claves, from = "2016-09-01", to=today(), warnings=FALSE)
 list <- lapply(c('AMXL.MX','WALMEX.MX','FEMSAUBD.MX','GFNORTEO.MX','CEMEXCPO.MX',
-                 'GMEXICOB.MX','BIMBOA.MX','TLEVISACPO.MX','AC.MX',"MXX"), function(x) Cl(get(x))) #Se quita el claves por el contenido por ^
+                 'GMEXICOB.MX','BIMBOA.MX','Q.MX','AC.MX',"MXX"), function(x) Cl(get(x))) #Se quita el claves por el contenido por ^
 precio <- (do.call(merge, list))
 ```
+### Introducción 
+Se creará un portafolio con diversos activos, variando en ponderación de cada uno de los seleccionados, con el fin de llegar a un portafolio que tenga un % de riesgo no sistemático menor al 60%, y buscando encontrar un alpha adecuada, maximizándola sin sacrificar el porcentaje ya mencionado.
 
 
-
-```{r}
+```{r, include=FALSE}
 precio_a <- merge.xts(
     to.monthly(precio[,1])[,4],
     to.monthly(precio[,2])[,4],
@@ -43,14 +44,26 @@ precio_a <- merge.xts(
 a_renm <- monthlyReturn(precio_a)[-1,]
 names(a_renm) <- ("Portafolio")
 ```
-Tener la acción de ca
-```{r}
-Valor_port <- 18*precio_a[,1]+12*precio_a[,2]+12*precio_a[,3]+11*precio_a[,4]+8*precio_a[,5]+8*precio_a[,6]+4*precio_a[,7]+4*precio_a[,8]+3*precio_a[,9]
+```{r, include=FALSE}
+Valor_port <- 10*precio_a[,1]+10*precio_a[,2]+7*precio_a[,3]+11*precio_a[,4]+9*precio_a[,5]+9*precio_a[,6]+4*precio_a[,7]+15*precio_a[,8]+5*precio_a[,9]
 port_renm <- monthlyReturn(Valor_port)[-1,]
 ```
+Con un total de 80 acciones, las repartimos entre los activos, de la siguiente manera:
+  - América Móvil 10 acciones
+  - Walmart México 10 acciones
+  - FEMSA 7 acciones
+  - Banorte 11 acciones
+  - CEMEX 9 acciones
+  - Grupo México 9 acciones
+  - Bimbo 4 acciones
+  - Qualitas 15 acciones 
+  - Arca Continental 5 acciones
+  
+¿Cómo seleccionamos estos activos?
 
+En base a la información de las empresas principales de distintos ETF's, y haciendo nosotros nuestro propio análisis técnico de los históricos. Utilizamos también [Investing](https://mx.investing.com/equities/) y [Yahoo Finance](https://finance.yahoo.com/etfs), donde cada uno tiene su  propia lista con los mejores activos, filtramos de México y nos pusimos a seleccionar. Fue básicamente prueba y error para llegar a los resultados deseados.
 
-```{r}
+```{r, include=FALSE}
 precio_m <- to.monthly(precio[,10])
 m_renm <- monthlyReturn(precio_m)
 names(m_renm) <- "IPC"
@@ -61,7 +74,7 @@ names(m_renm) <- "IPC"
 plot(merge.xts(port_renm, m_renm), main="Comp Mensual", legend.loc="bottom")
 ```
 
-```{r}
+```{r, include=FALSE}
 Rf <- read_xlsx("tasa_cete.xlsx")
 Rf <- subset(Rf, Rf$SF43945!="N/E")
 Rf$SF43945 <- as.numeric(Rf$SF43945)/100/12
@@ -70,33 +83,33 @@ Rf <- to.monthly(Rf)[,4][-1,]
 names(Rf) <- "Cete"
 ```
 
-```{r}
+```{r, include=FALSE}
 Rj <- Return.excess(port_renm, Rf) #Rendimiento extra que ofrece mi activo comparado con el rendimiento libre de riesgo
 Rm <- Return.excess(m_renm, Rf) #Rendimiento extra que ofrece el mercado comparado con el activo libre de riesgo
 ```
 
-```{r}
+```{r, include=FALSE}
 CAPM <- lm(Rj~Rm[-1,])
 summary(CAPM)
 ```
 
 
 
-```{r}
+```{r, include=FALSE}
 Beta <- CAPM[["coefficients"]][["Rm[-1, ]"]]
 Beta
 ```
 
-```{r}
+```{r, include=FALSE}
 Alpha <- CAPM[["coefficients"]][["(Intercept)"]]
 Alpha
 ```
 
-```{r}
-RC <- 0.9301 #Multiple R-squared
+```{r, include=FALSE}
+RC <- 0.8279 #Multiple R-squared
 PRS <- RC*100
 PRNS <- 100 - PRS
-RSE <- 0.01329        # Residual standard error 
+RSE <- 0.02292             # Residual standard error 
 RT <- (RSE)^2/(1-RC)*100
 RNS <- RSE^2*100
 RisgoNoSistematico <- RT*(1-RC)
@@ -109,3 +122,5 @@ Resultados <- tibble("Riesgo Total"=RT, "Riesgo Sistemático"=RT*RC, "Riesgo No 
 Resultados
 ```
 
+### Conclusión
+Al final, obtenemos un portafolio con un porcentaje de riesgo no sistemático del 17.21% y un alpha de 0.00528, pensamos que es un portafolio conservador pero que nos generará buenos rendimientos.
